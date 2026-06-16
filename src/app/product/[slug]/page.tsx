@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { getProductByVariantSlug } from "@/lib/catalog";
+import { getProductByVariantSlug, getAllVariantSlugs } from "@/lib/catalog";
 import { buildMetadata } from "@/lib/seo";
 import { absoluteUrl, site } from "@/lib/site";
 import { formatPrice } from "@/lib/utils";
@@ -11,6 +11,16 @@ import { AddToCartButton } from "@/components/product/AddToCartButton";
 import { JsonLd, breadcrumbSchema } from "@/components/seo/JsonLd";
 
 type Params = { slug: string };
+
+// Pre-render every product (variant) page as static HTML; refresh in the
+// background hourly. Served instantly from the CDN — no DB hit per request.
+export const revalidate = 3600;
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  const slugs = await getAllVariantSlugs();
+  return slugs.map((slug) => ({ slug }));
+}
 
 const availabilityLabel: Record<string, string> = {
   IN_STOCK: "В наличии",

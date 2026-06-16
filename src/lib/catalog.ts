@@ -31,6 +31,58 @@ export async function getNavCategories(): Promise<NavCat[]> {
   return catalogNav.map((c) => ({ name: c.name, slug: c.slug, children: c.children ?? [] }));
 }
 
+export type CategoryTile = {
+  name: string;
+  slug: string;
+  image: string | null;
+  childrenCount: number;
+};
+
+// Root categories with a representative product image (first image found in the
+// category subtree) for the homepage grid and catalog landing tiles.
+export async function getCategoryTiles(): Promise<CategoryTile[]> {
+  try {
+    const cats = await prisma.category.findMany({ orderBy: { sortOrder: "asc" } });
+    if (!cats.length) return [];
+
+    const families = await prisma.productFamily.findMany({
+      where: { mainImageUrl: { not: null } },
+      select: { categoryId: true, mainImageUrl: true },
+    });
+    const imgByCat = new Map<string, string>();
+    for (const f of families) {
+      if (f.mainImageUrl && !imgByCat.has(f.categoryId)) imgByCat.set(f.categoryId, f.mainImageUrl);
+    }
+
+    const childrenOf = new Map<string, string[]>();
+    for (const c of cats) {
+      if (!c.parentId) continue;
+      const arr = childrenOf.get(c.parentId) ?? [];
+      arr.push(c.id);
+      childrenOf.set(c.parentId, arr);
+    }
+    const findImg = (id: string): string | null => {
+      if (imgByCat.has(id)) return imgByCat.get(id)!;
+      for (const ch of childrenOf.get(id) ?? []) {
+        const r = findImg(ch);
+        if (r) return r;
+      }
+      return null;
+    };
+
+    return cats
+      .filter((c) => !c.parentId)
+      .map((r) => ({
+        name: r.name,
+        slug: r.slug,
+        image: r.imageUrl ?? findImg(r.id),
+        childrenCount: (childrenOf.get(r.id) ?? []).length,
+      }));
+  } catch {
+    return [];
+  }
+}
+
 // Collects a category id plus all of its descendant ids so a non-leaf
 // category page shows products from its subcategories too.
 async function descendantCategoryIds(categoryId: string): Promise<string[]> {
@@ -172,6 +224,15 @@ export async function getAllVariantSlugs(): Promise<string[]> {
   try {
     const variants = await prisma.variant.findMany({ select: { slug: true } });
     return variants.map((v) => v.slug);
+  } catch {
+    return [];
+  }
+}
+
+export async function getAllCategorySlugs(): Promise<string[]> {
+  try {
+    const cats = await prisma.category.findMany({ select: { slug: true } });
+    return cats.map((c) => c.slug);
   } catch {
     return [];
   }

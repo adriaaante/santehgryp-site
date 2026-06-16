@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getCategoryByPath, getCategoryProducts } from "@/lib/catalog";
+import { getCategoryByPath, getCategoryProducts, getAllCategorySlugs } from "@/lib/catalog";
 import { catalogNav } from "@/lib/nav";
 import { buildMetadata } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/site";
@@ -10,6 +10,15 @@ import { ProductCard } from "@/components/catalog/ProductCard";
 import { JsonLd, breadcrumbSchema } from "@/components/seo/JsonLd";
 
 const PAGE_SIZE = 24;
+
+// Pre-render category pages as static HTML (background refresh hourly).
+export const revalidate = 3600;
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  const slugs = await getAllCategorySlugs();
+  return slugs.map((slug) => ({ slug: [slug] }));
+}
 
 // Resolve category name/crumbs from the static nav as a fallback when the DB
 // has no record yet (e.g. before scraping). DB record takes precedence.

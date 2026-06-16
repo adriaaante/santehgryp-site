@@ -1,9 +1,10 @@
 import Link from "next/link";
+import Image from "next/image";
 import { site } from "@/lib/site";
-import { getFeaturedProducts, getNavCategories } from "@/lib/catalog";
+import { getFeaturedProducts, getCategoryTiles } from "@/lib/catalog";
 import { ProductCard } from "@/components/catalog/ProductCard";
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 const advantages = [
   { title: "Быстрая доставка", text: "Отправка в день заказа по всей России" },
@@ -13,9 +14,9 @@ const advantages = [
 ];
 
 export default async function HomePage() {
-  const [featured, catalogNav] = await Promise.all([
+  const [featured, tiles] = await Promise.all([
     getFeaturedProducts(8),
-    getNavCategories(),
+    getCategoryTiles(),
   ]);
 
   return (
@@ -50,23 +51,40 @@ export default async function HomePage() {
       </section>
 
       {/* Categories */}
-      <section className="container-page mt-12">
-        <h2 className="mb-5 text-2xl font-bold text-slate-900">Каталог товаров</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {catalogNav.map((cat) => (
-            <Link
-              key={cat.slug}
-              href={`/catalog/${cat.slug}`}
-              className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-300 hover:shadow-md"
-            >
-              <div className="font-semibold text-slate-900">{cat.name}</div>
-              <p className="mt-1 line-clamp-2 text-sm text-slate-500">
-                {cat.children?.map((c) => c.name).join(", ")}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {tiles.length > 0 && (
+        <section className="container-page mt-12">
+          <h2 className="mb-5 text-2xl font-bold text-slate-900">Каталог товаров</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {tiles.map((cat) => (
+              <Link
+                key={cat.slug}
+                href={`/catalog/${cat.slug}`}
+                className="group overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-brand-300 hover:shadow-md"
+              >
+                <div className="relative aspect-[4/3] bg-slate-50">
+                  {cat.image ? (
+                    <Image
+                      src={cat.image}
+                      alt={cat.name}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                      className="object-contain p-4 transition group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-slate-300">📦</div>
+                  )}
+                </div>
+                <div className="border-t border-slate-100 p-3">
+                  <div className="font-semibold text-slate-900 group-hover:text-brand-700">{cat.name}</div>
+                  {cat.childrenCount > 0 && (
+                    <div className="mt-0.5 text-xs text-slate-400">{cat.childrenCount} подкатегорий</div>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Featured products */}
       {featured.length > 0 && (
