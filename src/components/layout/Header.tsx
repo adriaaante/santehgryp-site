@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { catalogNav } from "@/lib/nav";
+import type { NavCat } from "@/lib/catalog";
 import { site } from "@/lib/site";
 import { SearchBox } from "@/components/search/SearchBox";
 import { useCart } from "@/stores/cart";
 
-export function Header() {
+export function Header({ categories }: { categories: NavCat[] }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const count = useCart((s) => s.items.reduce((n, i) => n + i.qty, 0));
@@ -84,7 +84,7 @@ export function Header() {
               onMouseLeave={() => setCatalogOpen(false)}
               className="absolute left-0 top-full z-50 grid w-full grid-cols-3 gap-x-8 gap-y-4 rounded-b-xl border border-slate-200 bg-white p-6 shadow-xl"
             >
-              {catalogNav.map((cat) => (
+              {categories.map((cat) => (
                 <div key={cat.slug}>
                   <Link
                     href={`/catalog/${cat.slug}`}
@@ -117,7 +117,7 @@ export function Header() {
       {menuOpen && (
         <nav className="border-t border-slate-100 bg-white md:hidden">
           <ul className="container-page divide-y divide-slate-100 py-2">
-            {catalogNav.map((cat) => (
+            {categories.map((cat) => (
               <li key={cat.slug} className="py-2">
                 <Link
                   href={`/catalog/${cat.slug}`}

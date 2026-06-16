@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { catalogNav } from "@/lib/nav";
 import { site } from "@/lib/site";
-import { getFeaturedProducts } from "@/lib/catalog";
+import { getFeaturedProducts, getNavCategories } from "@/lib/catalog";
 import { ProductCard } from "@/components/catalog/ProductCard";
 
-export const revalidate = 3600;
+export const revalidate = 600;
 
 const advantages = [
   { title: "Быстрая доставка", text: "Отправка в день заказа по всей России" },
@@ -14,7 +13,10 @@ const advantages = [
 ];
 
 export default async function HomePage() {
-  const featured = await getFeaturedProducts(8);
+  const [featured, catalogNav] = await Promise.all([
+    getFeaturedProducts(8),
+    getNavCategories(),
+  ]);
 
   return (
     <>

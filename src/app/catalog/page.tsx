@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { catalogNav } from "@/lib/nav";
+import { getNavCategories } from "@/lib/catalog";
 import { buildMetadata } from "@/lib/seo";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+
+export const revalidate = 600;
 
 export const metadata: Metadata = buildMetadata({
   title: "Каталог товаров",
@@ -11,7 +13,8 @@ export const metadata: Metadata = buildMetadata({
   path: "/catalog",
 });
 
-export default function CatalogPage() {
+export default async function CatalogPage() {
+  const catalogNav = await getNavCategories();
   return (
     <div className="container-page">
       <Breadcrumbs items={[{ name: "Главная", url: "/" }, { name: "Каталог", url: "/catalog" }]} />

@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { YandexMetrica } from "@/components/analytics/YandexMetrica";
 import { JsonLd, organizationSchema } from "@/components/seo/JsonLd";
+import { getNavCategories } from "@/lib/catalog";
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -25,16 +26,17 @@ export const metadata: Metadata = {
     : undefined,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const categories = await getNavCategories();
   return (
     <html lang="ru" className={inter.variable}>
       <body className="min-h-screen flex flex-col font-sans antialiased">
         <JsonLd data={organizationSchema(site.url, site.name)} />
-        <Header />
+        <Header categories={categories} />
         <main className="flex-1">{children}</main>
-        <Footer />
+        <Footer categories={categories} />
         <YandexMetrica />
       </body>
     </html>

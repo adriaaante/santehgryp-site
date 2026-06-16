@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { catalogNav } from "@/lib/nav";
+import type { NavCat } from "@/lib/catalog";
 import { site } from "@/lib/site";
 
-export function Footer() {
+export function Footer({ categories }: { categories: NavCat[] }) {
   return (
     <footer className="mt-16 border-t border-slate-200 bg-white">
       <div className="container-page grid grid-cols-2 gap-8 py-12 md:grid-cols-4">
@@ -22,7 +22,7 @@ export function Footer() {
         <div>
           <div className="mb-3 text-sm font-semibold text-slate-900">Каталог</div>
           <ul className="space-y-1.5">
-            {catalogNav.slice(0, 5).map((c) => (
+            {categories.slice(0, 5).map((c) => (
               <li key={c.slug}>
                 <Link href={`/catalog/${c.slug}`} className="text-sm text-slate-500 hover:text-brand-600">
                   {c.name}

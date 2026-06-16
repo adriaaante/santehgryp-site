@@ -1,5 +1,58 @@
 import { prisma } from "./db";
+import { catalogNav } from "./nav";
 import type { ProductCardData } from "@/components/catalog/ProductCard";
+
+export type NavCat = { name: string; slug: string; children: { name: string; slug: string }[] };
+
+// Top-level categories with their children, sourced from the DB; falls back to
+// the static nav before the catalog is imported. Drives the header mega-menu,
+// homepage grid, catalog landing and footer.
+export async function getNavCategories(): Promise<NavCat[]> {
+  try {
+    const cats = await prisma.category.findMany({ orderBy: { sortOrder: "asc" } });
+    if (cats.length) {
+      const childrenOf = new Map<string, typeof cats>();
+      for (const c of cats) {
+        if (!c.parentId) continue;
+        const arr = childrenOf.get(c.parentId) ?? [];
+        arr.push(c);
+        childrenOf.set(c.parentId, arr);
+      }
+      const roots = cats.filter((c) => !c.parentId);
+      return roots.map((r) => ({
+        name: r.name,
+        slug: r.slug,
+        children: (childrenOf.get(r.id) ?? []).slice(0, 8).map((c) => ({ name: c.name, slug: c.slug })),
+      }));
+    }
+  } catch {
+    /* fall through to static nav */
+  }
+  return catalogNav.map((c) => ({ name: c.name, slug: c.slug, children: c.children ?? [] }));
+}
+
+// Collects a category id plus all of its descendant ids so a non-leaf
+// category page shows products from its subcategories too.
+async function descendantCategoryIds(categoryId: string): Promise<string[]> {
+  const cats = await prisma.category.findMany({ select: { id: true, parentId: true } });
+  const childrenOf = new Map<string, string[]>();
+  for (const c of cats) {
+    if (!c.parentId) continue;
+    const arr = childrenOf.get(c.parentId) ?? [];
+    arr.push(c.id);
+    childrenOf.set(c.parentId, arr);
+  }
+  const ids = [categoryId];
+  const stack = [categoryId];
+  while (stack.length) {
+    const id = stack.pop()!;
+    for (const child of childrenOf.get(id) ?? []) {
+      ids.push(child);
+      stack.push(child);
+    }
+  }
+  return ids;
+}
 
 // Catalog read helpers. All wrapped to degrade gracefully when the DB is
 // empty or unavailable (e.g. before the scraper import has run).
@@ -84,9 +137,11 @@ export async function getCategoryProducts(
       opts.sort === "price_asc"
         ? { createdAt: "desc" as const }
         : { createdAt: "desc" as const };
+    const ids = await descendantCategoryIds(categoryId);
+    const where = { categoryId: { in: ids } };
     const [families, total] = await Promise.all([
       prisma.productFamily.findMany({
-        where: { categoryId },
+        where,
         skip: opts.skip ?? 0,
         take: opts.take ?? 24,
         orderBy,
@@ -95,7 +150,7 @@ export async function getCategoryProducts(
           _count: { select: { variants: true } },
         },
       }),
-      prisma.productFamily.count({ where: { categoryId } }),
+      prisma.productFamily.count({ where }),
     ]);
     const items = families
       .filter((f) => f.variants.length > 0)
