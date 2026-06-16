@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { NavCat } from "@/lib/catalog";
-import { site } from "@/lib/site";
+import { site, telHref } from "@/lib/site";
 
 export function Footer({ categories }: { categories: NavCat[] }) {
   return (
@@ -11,18 +11,19 @@ export function Footer({ categories }: { categories: NavCat[] }) {
           <p className="mt-2 text-sm text-slate-500">{site.tagline}</p>
           <div className="mt-4 space-y-1 text-sm">
             {site.phones.map((p) => (
-              <a key={p} href={`tel:${p.replace(/[^+\d]/g, "")}`} className="block font-semibold text-slate-800">
-                {p}
+              <a key={p.value} href={telHref(p.value)} className="block font-semibold text-slate-800 hover:text-brand-600">
+                {p.value}
+                <span className="ml-2 text-xs font-normal text-slate-400">{p.label}</span>
               </a>
             ))}
-            <a href={`mailto:${site.email}`} className="block text-slate-500">{site.email}</a>
+            <a href={`mailto:${site.email}`} className="block pt-1 text-slate-500">{site.email}</a>
           </div>
         </div>
 
         <div>
           <div className="mb-3 text-sm font-semibold text-slate-900">Каталог</div>
           <ul className="space-y-1.5">
-            {categories.slice(0, 5).map((c) => (
+            {categories.slice(0, 6).map((c) => (
               <li key={c.slug}>
                 <Link href={`/catalog/${c.slug}`} className="text-sm text-slate-500 hover:text-brand-600">
                   {c.name}
@@ -38,12 +39,18 @@ export function Footer({ categories }: { categories: NavCat[] }) {
             <li><Link href="/delivery" className="hover:text-brand-600">Доставка и оплата</Link></li>
             <li><Link href="/about" className="hover:text-brand-600">О компании</Link></li>
             <li><Link href="/contacts" className="hover:text-brand-600">Контакты</Link></li>
+            <li><Link href="/privacy" className="hover:text-brand-600">Политика конфиденциальности</Link></li>
           </ul>
         </div>
 
         <div>
           <div className="mb-3 text-sm font-semibold text-slate-900">Контакты</div>
-          <p className="text-sm text-slate-500">{site.address.locality}</p>
+          <p className="text-sm text-slate-500">{site.address.full}</p>
+          <div className="mt-2 text-sm text-slate-500">
+            {site.hours.map((h) => (
+              <div key={h.days}>{h.days}: {h.time}</div>
+            ))}
+          </div>
           <div className="mt-3 flex gap-3 text-sm">
             <a href={site.social.telegram} className="text-brand-600 hover:underline">Telegram</a>
             <a href={site.social.whatsapp} className="text-brand-600 hover:underline">WhatsApp</a>
@@ -52,9 +59,11 @@ export function Footer({ categories }: { categories: NavCat[] }) {
       </div>
 
       <div className="border-t border-slate-100">
-        <div className="container-page flex flex-col gap-2 py-4 text-xs text-slate-400 md:flex-row md:justify-between">
-          <span>© {new Date().getFullYear()} {site.name}. Все права защищены.</span>
-          <Link href="/privacy" className="hover:text-brand-600">Политика конфиденциальности</Link>
+        <div className="container-page space-y-1 py-4 text-xs text-slate-400">
+          <div className="flex flex-col gap-1 md:flex-row md:justify-between">
+            <span>© {new Date().getFullYear()} {site.name}. Все права защищены.</span>
+            <span>{site.legal.name} · ИНН {site.legal.inn} · ОГРНИП {site.legal.ogrnip}</span>
+          </div>
         </div>
       </div>
     </footer>

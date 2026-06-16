@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { site } from "@/lib/site";
-import { getFeaturedProducts, getCategoryTiles } from "@/lib/catalog";
+import { getFeaturedProducts, getCategoryTiles, getPromoProducts } from "@/lib/catalog";
 import { ProductCard } from "@/components/catalog/ProductCard";
 
 export const revalidate = 3600;
@@ -14,9 +14,10 @@ const advantages = [
 ];
 
 export default async function HomePage() {
-  const [featured, tiles] = await Promise.all([
+  const [featured, tiles, promos] = await Promise.all([
     getFeaturedProducts(8),
     getCategoryTiles(),
+    getPromoProducts(8),
   ]);
 
   return (
@@ -81,6 +82,21 @@ export default async function HomePage() {
                   )}
                 </div>
               </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Promotions / Акции */}
+      {promos.length > 0 && (
+        <section className="container-page mt-12">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="rounded-md bg-accent-500 px-2 py-1 text-sm font-bold text-white">АКЦИИ</span>
+            <h2 className="text-2xl font-bold text-slate-900">Скидки и спецпредложения</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {promos.map((p) => (
+              <ProductCard key={p.slug} product={p} />
             ))}
           </div>
         </section>

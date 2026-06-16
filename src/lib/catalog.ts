@@ -134,6 +134,33 @@ export async function getFeaturedProducts(limit = 8): Promise<ProductCardData[]>
   }
 }
 
+// Products on sale (cheapest variant has an old price above current price).
+export async function getPromoProducts(limit = 8): Promise<ProductCardData[]> {
+  try {
+    const families = await prisma.productFamily.findMany({
+      where: { variants: { some: { oldPrice: { not: null } } } },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        variants: { where: { oldPrice: { not: null } }, orderBy: { price: "asc" }, take: 1 },
+        _count: { select: { variants: true } },
+      },
+    });
+    return families
+      .filter((f) => f.variants.length > 0)
+      .map((f) => ({
+        slug: f.variants[0].slug,
+        name: f.name,
+        price: Number(f.variants[0].price),
+        oldPrice: f.variants[0].oldPrice ? Number(f.variants[0].oldPrice) : null,
+        image: f.mainImageUrl,
+        variantCount: f._count.variants,
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export async function getRootCategories() {
   try {
     return await prisma.category.findMany({

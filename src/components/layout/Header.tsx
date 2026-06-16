@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { NavCat } from "@/lib/catalog";
-import { site } from "@/lib/site";
+import { site, primaryPhone, telHref } from "@/lib/site";
 import { SearchBox } from "@/components/search/SearchBox";
 import { useCart } from "@/stores/cart";
 
@@ -46,10 +46,10 @@ export function Header({ categories }: { categories: NavCat[] }) {
 
         <div className="ml-auto flex items-center gap-4">
           <a
-            href={`tel:${site.phones[0].replace(/[^+\d]/g, "")}`}
+            href={telHref(primaryPhone)}
             className="hidden text-sm font-semibold text-slate-800 lg:block"
           >
-            {site.phones[0]}
+            {primaryPhone}
           </a>
           <Link href="/cart" className="relative flex items-center gap-1.5 text-slate-700 hover:text-brand-600">
             <CartIcon />

@@ -1,0 +1,56 @@
+name: Import full catalog
+
+# Runs the scraper on GitHub's runners (no sandbox time limits) and imports the
+# whole santehgryp.ru catalog into the Neon database used by the live site.
+# Trigger manually: GitHub repo → Actions → "Import full catalog" → Run workflow.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   DATABASE_URL           — Neon pooled connection string
+#   DATABASE_URL_UNPOOLED  — Neon direct connection string
+# Optional:
+#   VERCEL_DEPLOY_HOOK     — Vercel deploy hook URL to refresh the site after import
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Max products to import (leave empty for the full catalog)"
+        required: false
+        default: ""
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+      SCRAPE_CONCURRENCY: "8"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Scrape catalog from santehgryp.ru
+        run: |
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            npx tsx scraper/src/index.ts --no-cache --limit ${{ github.event.inputs.limit }}
+          else
+            npx tsx scraper/src/index.ts --no-cache
+          fi
+
+      - name: Apply schema to Neon
+        run: npx prisma db push --accept-data-loss --skip-generate
+
+      - name: Import catalog into the database
+        run: npx tsx prisma/seed.ts
+
+      - name: Refresh the live site (optional)
+        if: ${{ secrets.VERCEL_DEPLOY_HOOK != '' }}
+        run: curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
