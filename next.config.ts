@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Standalone server only for self-hosting (Docker/VPS). On Vercel the
+  // platform provides its own output, so skip it there.
+  output: process.env.VERCEL ? undefined : "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
   images: {

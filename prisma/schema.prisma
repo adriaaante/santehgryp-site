@@ -8,7 +8,11 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Pooled connection for the serverless runtime (Neon pooler / pgbouncer).
+  url       = env("DATABASE_URL")
+  // Direct connection for migrations / `prisma db push` (DDL). The Vercel↔Neon
+  // integration provides DATABASE_URL_UNPOOLED automatically.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // ── Catalog tree ────────────────────────────────────────────────────────
