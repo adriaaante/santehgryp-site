@@ -30,7 +30,9 @@ services:
   # Production web service — built from the standalone Next output.
   # For local dev run `npm run dev` instead and keep only db + search up.
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.vps
     restart: unless-stopped
     depends_on:
       db:
