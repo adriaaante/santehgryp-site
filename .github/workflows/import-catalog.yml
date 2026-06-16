@@ -7,8 +7,6 @@ name: Import full catalog
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   DATABASE_URL           — Neon pooled connection string
 #   DATABASE_URL_UNPOOLED  — Neon direct connection string
-# Optional:
-#   VERCEL_DEPLOY_HOOK     — Vercel deploy hook URL to refresh the site after import
 
 on:
   workflow_dispatch:
@@ -50,7 +48,3 @@ jobs:
 
       - name: Import catalog into the database
         run: npx tsx prisma/seed.ts
-
-      - name: Refresh the live site (optional)
-        if: ${{ secrets.VERCEL_DEPLOY_HOOK != '' }}
-        run: curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
