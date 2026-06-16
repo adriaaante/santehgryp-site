@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: santehgryp
+      POSTGRES_PASSWORD: santehgryp
+      POSTGRES_DB: santehgryp
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U santehgryp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  search:
+    image: getmeili/meilisearch:v1.12
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: masterKey_change_me
+      MEILI_ENV: production
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilidata:/meili_data
+
+  # Production web service — built from the standalone Next output.
+  # For local dev run `npm run dev` instead and keep only db + search up.
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      search:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://santehgryp:santehgryp@db:5432/santehgryp?schema=public
+      MEILISEARCH_HOST: http://search:7700
+      MEILISEARCH_API_KEY: masterKey_change_me
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  meilidata:
