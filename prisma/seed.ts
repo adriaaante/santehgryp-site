@@ -1,13 +1,46 @@
 import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { PrismaClient, type Availability } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-type Catalog = typeof import("../scraper/data/normalized/catalog.json");
+type Catalog = {
+  generatedAt: string;
+  categories: { slug: string; name: string; parentSlug: string | null; depth: number; sortOrder: number }[];
+  brands: { slug: string; name: string }[];
+  families: {
+    slug: string; name: string; categorySlug: string; brandSlug: string | null;
+    descriptionHtml: string | null; mainImageUrl: string | null;
+    variantAxes: { key: string; label: string; unit?: string }[];
+    variants: {
+      sku: string; slug: string; price: number; oldPrice: number | null;
+      availability: string; axisValues: Record<string, string>;
+      attributes: { code: string; name: string; value: string }[];
+    }[];
+  }[];
+  report: Record<string, number>;
+};
+
+// Resolve the dataset to import, preferring real full data, then committed
+// full/sample data (used on hosts like Railway where the scraper hasn't run).
+function resolveCatalogFile(): string {
+  const candidates = [
+    process.env.SEED_FILE,
+    "scraper/data/normalized/catalog.json", // freshly scraped (local)
+    "prisma/catalog.json", // committed full catalog
+    "prisma/sample-catalog.json", // committed demo subset (real data)
+  ].filter(Boolean) as string[];
+  for (const c of candidates) {
+    const abs = path.resolve(c);
+    if (existsSync(abs)) return abs;
+  }
+  throw new Error("No catalog file found to seed from");
+}
 
 async function main() {
-  const file = path.resolve("scraper/data/normalized/catalog.json");
+  const file = resolveCatalogFile();
+  console.log("→ seeding from", file);
   const catalog = JSON.parse(await readFile(file, "utf8")) as Catalog;
 
   console.log("→ seeding", catalog.families.length, "families…");

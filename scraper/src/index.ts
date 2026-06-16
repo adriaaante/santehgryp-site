@@ -32,6 +32,36 @@ function buildCategories(products: RawProduct[]): CategoryNode[] {
   return [...map.values()];
 }
 
+async function writeCatalog(products: RawProduct[], partial: boolean) {
+  const categories = buildCategories(products);
+  const families = buildFamilies(products);
+  const brands = [
+    ...new Map(
+      products
+        .filter((p) => p.brand)
+        .map((p) => [slugify(p.brand!), { slug: slugify(p.brand!), name: p.brand! }]),
+    ).values(),
+  ];
+  const catalog: Catalog = {
+    generatedAt: new Date().toISOString(),
+    categories,
+    brands,
+    families,
+    report: {
+      productsParsed: products.length,
+      categories: categories.length,
+      brands: brands.length,
+      families: families.length,
+      groupedFamilies: families.filter((f) => f.confidence === "grouped").length,
+      variants: families.reduce((n, f) => n + f.variants.length, 0),
+      partial: partial ? 1 : 0,
+    },
+  };
+  await mkdir(OUT_DIR, { recursive: true });
+  await writeFile(path.join(OUT_DIR, "catalog.json"), JSON.stringify(catalog, null, 2), "utf8");
+  return catalog.report;
+}
+
 async function main() {
   const limit = arg("--limit") ? Number(arg("--limit")) : Infinity;
   const useCache = !process.argv.includes("--no-cache");
@@ -63,6 +93,11 @@ async function main() {
           if (failed <= 10) console.warn(`  fail ${url}: ${(e as Error).message}`);
         } finally {
           if (++done % 200 === 0) console.log(`  processed ${done}/${urls.length}`);
+          // Periodic checkpoint so a long crawl survives interruption.
+          if (done % 1000 === 0) {
+            await writeCatalog(products, true).catch(() => {});
+            console.log(`  ↳ checkpoint written (${products.length} products so far)`);
+          }
         }
       }),
     ),
@@ -70,42 +105,9 @@ async function main() {
 
   console.log(`→ parsed ${products.length} products (${dead} dead, ${failed} failed)`);
 
-  const categories = buildCategories(products);
-  const families = buildFamilies(products);
-
-  const brands = [
-    ...new Map(
-      products
-        .filter((p) => p.brand)
-        .map((p) => [slugify(p.brand!), { slug: slugify(p.brand!), name: p.brand! }]),
-    ).values(),
-  ];
-
-  const grouped = families.filter((f) => f.confidence === "grouped").length;
-  const report = {
-    productsParsed: products.length,
-    dead,
-    failed,
-    categories: categories.length,
-    brands: brands.length,
-    families: families.length,
-    groupedFamilies: grouped,
-    variants: families.reduce((n, f) => n + f.variants.length, 0),
-  };
-
-  const catalog: Catalog = {
-    generatedAt: new Date().toISOString(),
-    categories,
-    brands,
-    families,
-    report,
-  };
-
-  await mkdir(OUT_DIR, { recursive: true });
-  await writeFile(path.join(OUT_DIR, "catalog.json"), JSON.stringify(catalog, null, 2), "utf8");
-
+  const report = await writeCatalog(products, false);
   console.log("→ wrote scraper/data/normalized/catalog.json");
-  console.table(report);
+  console.table({ ...report, dead, failed });
 }
 
 main().catch((e) => {

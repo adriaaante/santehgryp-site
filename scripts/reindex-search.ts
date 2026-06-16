@@ -11,12 +11,18 @@ async function main() {
   if (!host) throw new Error("MEILISEARCH_HOST is not set");
   const client = new MeiliSearch({ host, apiKey: process.env.MEILISEARCH_API_KEY });
 
+  // Load the full category tree once so we can resolve ancestry at any depth.
+  const allCats = await prisma.category.findMany({
+    select: { id: true, name: true, slug: true, parentId: true },
+  });
+  const catById = new Map(allCats.map((c) => [c.id, c]));
+
   const variants = await prisma.variant.findMany({
     include: {
       family: {
         include: {
           brand: true,
-          category: { include: { parent: true } },
+          category: true,
           attributes: { include: { attribute: true } },
         },
       },
@@ -27,11 +33,11 @@ async function main() {
     const f = v.family;
     const path: string[] = [];
     const slugs: string[] = [];
-    let cat: typeof f.category | null = f.category;
+    let cat = catById.get(f.categoryId);
     while (cat) {
       path.unshift(cat.name);
       slugs.unshift(cat.slug);
-      cat = (cat as { parent?: typeof cat }).parent ?? null;
+      cat = cat.parentId ? catById.get(cat.parentId) : undefined;
     }
     const attributes: Record<string, string> = {};
     for (const a of f.attributes) attributes[a.attribute.code] = a.value;

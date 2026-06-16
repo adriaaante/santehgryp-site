@@ -36,7 +36,9 @@ export async function fetchCached(url: string, useCache = true): Promise<string>
     return readFile(file, "utf8");
   }
   const body = await getOk(url);
-  if (body) {
+  // Only persist raw HTML when caching is enabled (a full 18k crawl with
+  // --no-cache streams without filling the disk with ~6GB of pages).
+  if (body && useCache) {
     await mkdir(CACHE_DIR, { recursive: true });
     await writeFile(file, body, "utf8");
   }
