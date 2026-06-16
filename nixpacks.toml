@@ -1,0 +1,10 @@
+# Force `npm install` (not the default `npm ci`) so platform-specific optional
+# native deps (@tailwindcss/oxide, lightningcss) are resolved for the build
+# platform — works around npm optional-deps bug (npm/cli#4828) that breaks
+# Tailwind v4 in clean CI installs. --include=dev keeps build-time deps
+# (tailwindcss, typescript) even if the environment runs npm in production mode.
+[phases.install]
+cmds = ["npm install --include=dev --no-audit --no-fund"]
+
+[phases.build]
+cmds = ["npm run build"]
